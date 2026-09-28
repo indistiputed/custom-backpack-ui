@@ -1,0 +1,1267 @@
+local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local GuiService = game:GetService("GuiService")
+
+local plr = Players.LocalPlayer
+local pg = plr:WaitForChild("PlayerGui")
+
+pcall(function()
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+end)
+
+local old = pg:FindFirstChild("CustomInventory")
+if old then
+	old:Destroy()
+end
+
+local gui = Instance.new("ScreenGui")
+local bar = Instance.new("Frame")
+local layout = Instance.new("UIListLayout")
+local inventory = Instance.new("Frame")
+local inventoryCorner = Instance.new("UICorner")
+local inventoryStroke = Instance.new("UIStroke")
+local inventoryConstraint = Instance.new("UISizeConstraint")
+local search = Instance.new("TextBox")
+local searchCorner = Instance.new("UICorner")
+local searchStroke = Instance.new("UIStroke")
+local searchPadding = Instance.new("UIPadding")
+local items = Instance.new("ScrollingFrame")
+local itemsPadding = Instance.new("UIPadding")
+local itemsGrid = Instance.new("UIGridLayout")
+local editor = Instance.new("Frame")
+local editorGrid = Instance.new("UIGridLayout")
+local backpackButton = Instance.new("ImageButton")
+local backpackCorner = Instance.new("UICorner")
+local backpackStroke = Instance.new("UIStroke")
+local backpackIcon = Instance.new("ImageLabel")
+local backpackScale = Instance.new("UIScale")
+local dragGhost = Instance.new("Frame")
+local dragGhostCorner = Instance.new("UICorner")
+local dragGhostStroke = Instance.new("UIStroke")
+local dragGhostNumber = Instance.new("TextLabel")
+local dragGhostIcon = Instance.new("ImageLabel")
+local dragGhostFallback = Instance.new("TextLabel")
+local dragGhostName = Instance.new("TextLabel")
+
+gui.Name = "CustomInventory"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.DisplayOrder = 1000
+gui.Parent = pg
+bar.Name = "Bar"
+bar.AnchorPoint = Vector2.new(0.5, 1)
+bar.Position = UDim2.new(0.5, 0, 1, -18)
+bar.Size = UDim2.fromOffset(600, 56)
+bar.BackgroundTransparency = 1
+bar.BorderSizePixel = 0
+bar.Parent = gui
+layout.FillDirection = Enum.FillDirection.Horizontal
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+layout.VerticalAlignment = Enum.VerticalAlignment.Center
+layout.Padding = UDim.new(0, 6)
+layout.Parent = bar
+inventory.Name = "Inventory"
+inventory.AnchorPoint = Vector2.new(0.5, 0.5)
+inventory.Position = UDim2.fromScale(0.5, 0.5)
+inventory.Size = UDim2.new(0.86, 0, 0, 440)
+inventory.BackgroundColor3 = Color3.fromRGB(15, 15, 19)
+inventory.BackgroundTransparency = 0.4
+inventory.BorderSizePixel = 0
+inventory.Visible = false
+inventory.Parent = gui
+inventoryCorner.CornerRadius = UDim.new(0, 18)
+inventoryCorner.Parent = inventory
+inventoryStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+inventoryStroke.Color = Color3.fromRGB(82, 82, 92)
+inventoryStroke.Thickness = 2
+inventoryStroke.Transparency = 0
+inventoryStroke.Parent = inventory
+inventoryConstraint.MinSize = Vector2.new(340, 400)
+inventoryConstraint.MaxSize = Vector2.new(620, 500)
+inventoryConstraint.Parent = inventory
+
+local shadowLayers = {
+	{13, 0.94},
+	{9, 0.88},
+	{6, 0.8},
+	{3, 0.7},
+	{1.5, 0.58}
+}
+
+for i, layer in ipairs(shadowLayers) do
+	local shadow = Instance.new("Frame")
+	local shadowCorner = Instance.new("UICorner")
+	local shadowStroke = Instance.new("UIStroke")
+
+	shadow.Name = "Shadow" .. i
+	shadow.AnchorPoint = Vector2.new(0.5, 0.5)
+	shadow.Position = UDim2.fromScale(0.5, 0.5)
+	shadow.Size = UDim2.new(1, 4, 1, 4)
+	shadow.BackgroundTransparency = 1
+	shadow.BorderSizePixel = 0
+	shadow.Active = false
+	shadow.ZIndex = 0
+	shadow.Parent = inventory
+	shadowCorner.CornerRadius = UDim.new(0, 20)
+	shadowCorner.Parent = shadow
+	shadowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	shadowStroke.Color = Color3.fromRGB(0, 0, 0)
+	shadowStroke.Thickness = layer[1]
+	shadowStroke.Transparency = layer[2]
+	shadowStroke.Parent = shadow
+end
+
+search.Name = "Search"
+search.Position = UDim2.new(0, 16, 0, 16)
+search.Size = UDim2.new(1, -32, 0, 40)
+search.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+search.BackgroundTransparency = 0.6
+search.BorderSizePixel = 0
+search.ClearTextOnFocus = false
+search.Font = Enum.Font.Gotham
+search.PlaceholderText = "Search inventory..."
+search.PlaceholderColor3 = Color3.fromRGB(115, 115, 125)
+search.Text = ""
+search.TextColor3 = Color3.fromRGB(238, 238, 242)
+search.TextSize = 12
+search.Parent = inventory
+searchCorner.CornerRadius = UDim.new(0, 11)
+searchCorner.Parent = search
+searchStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+searchStroke.Color = Color3.fromRGB(75, 75, 86)
+searchStroke.Thickness = 1.5
+searchStroke.Transparency = 0
+searchStroke.Parent = search
+searchPadding.PaddingLeft = UDim.new(0, 13)
+searchPadding.Parent = search
+items.Name = "Items"
+items.Position = UDim2.new(0, 16, 0, 68)
+items.Size = UDim2.new(1, -32, 1, -158)
+items.BackgroundTransparency = 1
+items.BorderSizePixel = 0
+items.ScrollBarThickness = 3
+items.ScrollBarImageColor3 = Color3.fromRGB(95, 95, 105)
+items.CanvasSize = UDim2.new()
+items.AutomaticCanvasSize = Enum.AutomaticSize.Y
+items.Parent = inventory
+itemsPadding.PaddingTop = UDim.new(0, 3)
+itemsPadding.PaddingBottom = UDim.new(0, 5)
+itemsPadding.PaddingLeft = UDim.new(0, 3)
+itemsPadding.PaddingRight = UDim.new(0, 3)
+itemsPadding.Parent = items
+itemsGrid.CellSize = UDim2.fromOffset(88, 86)
+itemsGrid.CellPadding = UDim2.fromOffset(8, 8)
+itemsGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+itemsGrid.SortOrder = Enum.SortOrder.LayoutOrder
+itemsGrid.Parent = items
+editor.Name = "HotbarEditor"
+editor.AnchorPoint = Vector2.new(0.5, 1)
+editor.Position = UDim2.new(0.5, 0, 1, -14)
+editor.Size = UDim2.new(1, -32, 0, 60)
+editor.BackgroundTransparency = 1
+editor.BorderSizePixel = 0
+editor.Parent = inventory
+editorGrid.CellSize = UDim2.fromOffset(40, 46)
+editorGrid.CellPadding = UDim2.fromOffset(6, 0)
+editorGrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+editorGrid.VerticalAlignment = Enum.VerticalAlignment.Center
+editorGrid.SortOrder = Enum.SortOrder.LayoutOrder
+editorGrid.Parent = editor
+backpackButton.Name = "BackpackButton"
+backpackButton.AnchorPoint = Vector2.new(1, 0)
+backpackButton.Position = UDim2.new(1, -18, 0, 18)
+backpackButton.Size = UDim2.fromOffset(44, 44)
+backpackButton.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+backpackButton.BackgroundTransparency = 0.1
+backpackButton.BorderSizePixel = 0
+backpackButton.AutoButtonColor = false
+backpackButton.ImageTransparency = 1
+backpackButton.Parent = gui
+backpackCorner.CornerRadius = UDim.new(1, 0)
+backpackCorner.Parent = backpackButton
+backpackStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+backpackStroke.Color = Color3.fromRGB(60, 60, 70)
+backpackStroke.Thickness = 1.5
+backpackStroke.Transparency = 0
+backpackStroke.Parent = backpackButton
+backpackIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+backpackIcon.Position = UDim2.fromScale(0.5, 0.5)
+backpackIcon.Size = UDim2.fromOffset(19, 19)
+backpackIcon.BackgroundTransparency = 1
+backpackIcon.Image = "rbxassetid://10709769841"
+backpackIcon.ImageColor3 = Color3.fromRGB(235, 235, 240)
+backpackIcon.ScaleType = Enum.ScaleType.Fit
+backpackIcon.Parent = backpackButton
+backpackScale.Scale = 1
+backpackScale.Parent = backpackButton
+dragGhost.Name = "DragGhost"
+dragGhost.AnchorPoint = Vector2.new(0.5, 0.5)
+dragGhost.Size = UDim2.fromOffset(58, 54)
+dragGhost.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+dragGhost.BackgroundTransparency = 0.05
+dragGhost.BorderSizePixel = 0
+dragGhost.Visible = false
+dragGhost.Active = false
+dragGhost.ZIndex = 500
+dragGhost.Parent = gui
+dragGhostCorner.CornerRadius = UDim.new(0, 9)
+dragGhostCorner.Parent = dragGhost
+dragGhostStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+dragGhostStroke.Color = Color3.fromRGB(255, 255, 255)
+dragGhostStroke.Thickness = 2
+dragGhostStroke.Transparency = 0
+dragGhostStroke.Parent = dragGhost
+dragGhostNumber.BackgroundTransparency = 1
+dragGhostNumber.Position = UDim2.new(0, 6, 0, 4)
+dragGhostNumber.Size = UDim2.fromOffset(14, 14)
+dragGhostNumber.Font = Enum.Font.GothamBold
+dragGhostNumber.TextColor3 = Color3.fromRGB(155, 155, 165)
+dragGhostNumber.TextSize = 10
+dragGhostNumber.TextXAlignment = Enum.TextXAlignment.Left
+dragGhostNumber.ZIndex = 501
+dragGhostNumber.Parent = dragGhost
+dragGhostIcon.BackgroundTransparency = 1
+dragGhostIcon.AnchorPoint = Vector2.new(0.5, 0)
+dragGhostIcon.Position = UDim2.new(0.5, 0, 0, 8)
+dragGhostIcon.Size = UDim2.fromOffset(30, 27)
+dragGhostIcon.ScaleType = Enum.ScaleType.Fit
+dragGhostIcon.ZIndex = 501
+dragGhostIcon.Parent = dragGhost
+dragGhostFallback.BackgroundTransparency = 1
+dragGhostFallback.AnchorPoint = Vector2.new(0.5, 0)
+dragGhostFallback.Position = UDim2.new(0.5, 0, 0, 8)
+dragGhostFallback.Size = UDim2.fromOffset(30, 27)
+dragGhostFallback.Font = Enum.Font.GothamBold
+dragGhostFallback.TextColor3 = Color3.fromRGB(210, 210, 218)
+dragGhostFallback.TextSize = 18
+dragGhostFallback.Visible = false
+dragGhostFallback.ZIndex = 502
+dragGhostFallback.Parent = dragGhost
+dragGhostName.BackgroundTransparency = 1
+dragGhostName.Position = UDim2.new(0, 4, 1, -16)
+dragGhostName.Size = UDim2.new(1, -8, 0, 13)
+dragGhostName.Font = Enum.Font.GothamMedium
+dragGhostName.TextColor3 = Color3.fromRGB(220, 220, 228)
+dragGhostName.TextSize = 8
+dragGhostName.TextTruncate = Enum.TextTruncate.AtEnd
+dragGhostName.ZIndex = 502
+dragGhostName.Parent = dragGhost
+
+local slots = {}
+local editorSlots = {}
+local inventoryItems = {}
+local hotbarTools = {}
+local toolOrder = {}
+local toolConnections = {}
+local orderCounter = 0
+local refreshQueued = false
+local inventoryOpen = false
+local spinAngle = 0
+
+local dragTool = nil
+local dragSlot = nil
+local dragInput = nil
+local dragStart = nil
+local dragging = false
+local dragScale = nil
+local hoverSlot = nil
+
+local refreshHotbar
+local refreshEditor
+local refreshInventory
+local updateVisuals
+local syncTools
+
+local function updateEditorLayout()
+	local w = editor.AbsoluteSize.X
+
+	if w <= 0 then
+		return
+	end
+
+	local gap = math.clamp(math.floor(w * 0.018), 5, 12)
+	local cw = math.floor((w - 6 - gap * 9) / 10)
+
+	cw = math.clamp(cw, 20, 56)
+
+	local ch = math.clamp(cw + 8, 44, 56)
+
+	editorGrid.CellPadding = UDim2.fromOffset(gap, 0)
+	editorGrid.CellSize = UDim2.fromOffset(cw, ch)
+end
+
+editor:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateEditorLayout)
+
+local function toScreen(position)
+	local inset = GuiService:GetGuiInset()
+	return Vector2.new(position.X + inset.X, position.Y + inset.Y)
+end
+
+local function getTools()
+	local tools = {}
+	local seen = {}
+	local backpack = plr:FindFirstChildOfClass("Backpack")
+	local character = plr.Character
+
+	if backpack then
+		for _, tool in ipairs(backpack:GetChildren()) do
+			if tool:IsA("Tool") then
+				seen[tool] = true
+
+				if not toolOrder[tool] then
+					orderCounter += 1
+					toolOrder[tool] = orderCounter
+				end
+			end
+		end
+	end
+
+	if character then
+		for _, tool in ipairs(character:GetChildren()) do
+			if tool:IsA("Tool") then
+				seen[tool] = true
+
+				if not toolOrder[tool] then
+					orderCounter += 1
+					toolOrder[tool] = orderCounter
+				end
+			end
+		end
+	end
+
+	for tool in pairs(toolOrder) do
+		if not seen[tool] then
+			toolOrder[tool] = nil
+		end
+	end
+
+	for tool in pairs(seen) do
+		table.insert(tools, tool)
+	end
+
+	table.sort(tools, function(a, b)
+		return toolOrder[a] < toolOrder[b]
+	end)
+
+	return tools
+end
+
+local function isEquipped(tool)
+	local character = plr.Character
+	return character and tool.Parent == character
+end
+
+local function getHotbarSlot(tool)
+	for i = 1, 10 do
+		if hotbarTools[i] == tool then
+			return i
+		end
+	end
+
+	return nil
+end
+
+local function getEmptyHotbarSlot()
+	for i = 1, 10 do
+		if not hotbarTools[i] then
+			return i
+		end
+	end
+
+	return nil
+end
+
+local function setVisual(slotData, state)
+	if not slotData or not slotData.stroke or not slotData.stroke.Parent then
+		return
+	end
+
+	slotData.stroke.Enabled = true
+	slotData.stroke.Color = state
+		and Color3.fromRGB(255, 255, 255)
+		or Color3.fromRGB(58, 58, 68)
+	slotData.stroke.Thickness = state and 2.5 or 1.5
+	slotData.stroke.Transparency = 0
+end
+
+local function setBackpackVisual(state)
+	TweenService:Create(
+		backpackStroke,
+		TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{
+			Color = state
+				and Color3.fromRGB(255, 255, 255)
+				or Color3.fromRGB(60, 60, 70),
+			Thickness = state and 2.5 or 1.5
+		}
+	):Play()
+end
+
+local function spinBackpack(state)
+	spinAngle += state and 360 or -360
+
+	TweenService:Create(
+		backpackIcon,
+		TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{Rotation = spinAngle}
+	):Play()
+end
+
+updateVisuals = function()
+	for tool, slotData in pairs(slots) do
+		if tool:IsDescendantOf(plr) then
+			setVisual(slotData, isEquipped(tool))
+		end
+	end
+
+	for i, slotData in pairs(editorSlots) do
+		if slotData.tool and i ~= hoverSlot then
+			setVisual(slotData, isEquipped(slotData.tool))
+		end
+	end
+
+	for tool, slotData in pairs(inventoryItems) do
+		if tool:IsDescendantOf(plr) then
+			setVisual(slotData, isEquipped(tool))
+		end
+	end
+end
+
+local function clickEffect(slotData)
+	if not slotData or not slotData.scale or not slotData.scale.Parent then
+		return
+	end
+
+	slotData.scale.Scale = 1
+
+	TweenService:Create(
+		slotData.scale,
+		TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{Scale = 0.92}
+	):Play()
+
+	task.delay(0.08, function()
+		if slotData.scale.Parent then
+			TweenService:Create(
+				slotData.scale,
+				TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{Scale = 1}
+			):Play()
+		end
+	end)
+end
+
+local function equipTool(tool)
+	local character = plr.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+
+	if not humanoid or not tool then
+		return
+	end
+
+	if isEquipped(tool) then
+		humanoid:UnequipTools()
+	else
+		humanoid:EquipTool(tool)
+	end
+end
+
+local function connectTool(tool)
+	if toolConnections[tool] then
+		return
+	end
+
+	toolConnections[tool] = {
+		tool.Equipped:Connect(function()
+			setVisual(slots[tool], true)
+
+			local slot = getHotbarSlot(tool)
+
+			if slot and slot ~= hoverSlot then
+				setVisual(editorSlots[slot], true)
+			end
+
+			setVisual(inventoryItems[tool], true)
+		end),
+		tool.Unequipped:Connect(function()
+			setVisual(slots[tool], false)
+
+			local slot = getHotbarSlot(tool)
+
+			if slot and slot ~= hoverSlot then
+				setVisual(editorSlots[slot], false)
+			end
+
+			setVisual(inventoryItems[tool], false)
+		end)
+	}
+end
+
+local function disconnectTool(tool)
+	local connections = toolConnections[tool]
+
+	if not connections then
+		return
+	end
+
+	for _, connection in ipairs(connections) do
+		connection:Disconnect()
+	end
+
+	toolConnections[tool] = nil
+end
+
+local function clearButtons(parent)
+	for _, child in ipairs(parent:GetChildren()) do
+		if child:IsA("TextButton") then
+			child:Destroy()
+		end
+	end
+end
+
+local function getEditorSlotAt(position)
+	local ep = editor.AbsolutePosition
+	local es = editor.AbsoluteSize
+
+	if position.Y < ep.Y - 24
+		or position.Y > ep.Y + es.Y + 24
+		or position.X < ep.X - 14
+		or position.X > ep.X + es.X + 14 then
+		return nil
+	end
+
+	local best = nil
+	local bestDist = math.huge
+
+	for i = 1, 10 do
+		local slotData = editorSlots[i]
+
+		if slotData and slotData.button.Parent then
+			local button = slotData.button
+			local center = button.AbsolutePosition.X + button.AbsoluteSize.X / 2
+			local dist = math.abs(position.X - center)
+
+			if dist < bestDist then
+				bestDist = dist
+				best = i
+			end
+		end
+	end
+
+	return best
+end
+
+local function resetEditorSlot(slotData)
+	if not slotData or not slotData.button.Parent then
+		return
+	end
+
+	slotData.button.BackgroundColor3 = slotData.tool
+		and Color3.fromRGB(20, 20, 24)
+		or Color3.fromRGB(18, 18, 22)
+	slotData.button.BackgroundTransparency = slotData.tool and 0 or 0.35
+
+	setVisual(slotData, slotData.tool and isEquipped(slotData.tool))
+end
+
+local function setHover(slot)
+	if slot == hoverSlot then
+		return
+	end
+
+	local prev = hoverSlot and editorSlots[hoverSlot]
+
+	hoverSlot = slot
+
+	resetEditorSlot(prev)
+
+	local cur = slot and editorSlots[slot]
+
+	if cur and slot ~= dragSlot and cur.button.Parent then
+		cur.button.BackgroundColor3 = Color3.fromRGB(48, 48, 58)
+		cur.button.BackgroundTransparency = 0
+		cur.stroke.Color = Color3.fromRGB(255, 255, 255)
+		cur.stroke.Thickness = 3
+		cur.stroke.Transparency = 0
+	end
+end
+
+local function showDragGhost(tool, slot, position)
+	dragGhostNumber.Text = slot and (slot == 10 and "0" or tostring(slot)) or ""
+	dragGhostIcon.Image = tool.TextureId or ""
+	dragGhostFallback.Text = string.upper(string.sub(tool.Name, 1, 1))
+	dragGhostFallback.Visible = tool.TextureId == ""
+	dragGhostName.Text = tool.Name
+	dragGhost.Position = UDim2.fromOffset(position.X, position.Y)
+	dragGhost.Visible = true
+end
+
+local function hideDragGhost()
+	dragGhost.Visible = false
+end
+
+local function beginDragging(position)
+	if dragging or not dragTool then
+		return
+	end
+
+	dragging = true
+	showDragGhost(dragTool, dragSlot, position)
+	setHover(getEditorSlotAt(position))
+end
+
+local function stopInteraction()
+	setHover(nil)
+	dragTool = nil
+	dragSlot = nil
+	dragInput = nil
+	dragStart = nil
+	dragging = false
+	dragScale = nil
+	hideDragGhost()
+end
+
+local function beginPress(tool, slot, input, scale)
+	if not tool then
+		return
+	end
+
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1
+		and input.UserInputType ~= Enum.UserInputType.Touch then
+		return
+	end
+
+	if dragTool and dragInput and dragInput.UserInputState == Enum.UserInputState.End then
+		stopInteraction()
+	end
+
+	if dragTool then
+		return
+	end
+
+	dragTool = tool
+	dragSlot = slot
+	dragInput = input
+	dragStart = toScreen(input.Position)
+	dragging = false
+	dragScale = scale
+end
+
+local function finishPress(position, input)
+	if not dragTool or input ~= dragInput then
+		return
+	end
+
+	local tool = dragTool
+	local sourceSlot = dragSlot
+	local wasDragging = dragging
+	local scale = dragScale
+	local targetSlot = hoverSlot
+
+	if wasDragging then
+		stopInteraction()
+
+		if targetSlot and targetSlot ~= sourceSlot and hotbarTools[sourceSlot] == tool then
+			local targetTool = hotbarTools[targetSlot]
+
+			hotbarTools[sourceSlot] = targetTool
+			hotbarTools[targetSlot] = tool
+
+			refreshHotbar()
+			refreshEditor()
+			updateVisuals()
+		end
+
+		return
+	end
+
+	stopInteraction()
+
+	if scale then
+		clickEffect({
+			scale = scale
+		})
+	end
+
+	equipTool(tool)
+end
+
+local function updateDragPosition(position)
+	if not dragTool or not dragging then
+		return
+	end
+
+	dragGhost.Position = UDim2.fromOffset(position.X, position.Y)
+	setHover(getEditorSlotAt(position))
+end
+
+refreshHotbar = function()
+	clearButtons(bar)
+	table.clear(slots)
+
+	for i = 1, 10 do
+		local tool = hotbarTools[i]
+
+		if tool then
+			local button = Instance.new("TextButton")
+			local corner = Instance.new("UICorner")
+			local stroke = Instance.new("UIStroke")
+			local scale = Instance.new("UIScale")
+			local number = Instance.new("TextLabel")
+			local icon = Instance.new("ImageLabel")
+			local fallback = Instance.new("TextLabel")
+			local name = Instance.new("TextLabel")
+
+			button.Name = "Slot" .. i
+			button.Size = UDim2.fromOffset(58, 54)
+			button.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+			button.BorderSizePixel = 0
+			button.AutoButtonColor = false
+			button.Text = ""
+			button.LayoutOrder = i
+			button.Parent = bar
+			corner.CornerRadius = UDim.new(0, 9)
+			corner.Parent = button
+			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			stroke.Enabled = true
+			stroke.Transparency = 0
+			stroke.Thickness = 1
+			stroke.Color = Color3.fromRGB(55, 55, 62)
+			stroke.Parent = button
+			scale.Scale = 1
+			scale.Parent = button
+			number.Name = "Number"
+			number.BackgroundTransparency = 1
+			number.Position = UDim2.new(0, 6, 0, 4)
+			number.Size = UDim2.fromOffset(14, 14)
+			number.Font = Enum.Font.GothamBold
+			number.Text = i == 10 and "0" or tostring(i)
+			number.TextColor3 = Color3.fromRGB(155, 155, 165)
+			number.TextSize = 10
+			number.TextXAlignment = Enum.TextXAlignment.Left
+			number.Parent = button
+			icon.Name = "Icon"
+			icon.BackgroundTransparency = 1
+			icon.AnchorPoint = Vector2.new(0.5, 0)
+			icon.Position = UDim2.new(0.5, 0, 0, 8)
+			icon.Size = UDim2.fromOffset(30, 27)
+			icon.ScaleType = Enum.ScaleType.Fit
+			icon.Image = tool.TextureId or ""
+			icon.Parent = button
+			fallback.Name = "Fallback"
+			fallback.BackgroundTransparency = 1
+			fallback.AnchorPoint = Vector2.new(0.5, 0)
+			fallback.Position = UDim2.new(0.5, 0, 0, 8)
+			fallback.Size = UDim2.fromOffset(30, 27)
+			fallback.Font = Enum.Font.GothamBold
+			fallback.Text = string.upper(string.sub(tool.Name, 1, 1))
+			fallback.TextColor3 = Color3.fromRGB(210, 210, 218)
+			fallback.TextSize = 18
+			fallback.Visible = tool.TextureId == ""
+			fallback.Parent = button
+			name.Name = "Name"
+			name.BackgroundTransparency = 1
+			name.Position = UDim2.new(0, 4, 1, -16)
+			name.Size = UDim2.new(1, -8, 0, 13)
+			name.Font = Enum.Font.GothamMedium
+			name.Text = tool.Name
+			name.TextColor3 = Color3.fromRGB(220, 220, 228)
+			name.TextSize = 8
+			name.TextTruncate = Enum.TextTruncate.AtEnd
+			name.Parent = button
+
+			local slotData = {
+				button = button,
+				stroke = stroke,
+				scale = scale,
+				tool = tool,
+				slot = i
+			}
+
+			slots[tool] = slotData
+
+			setVisual(slotData, isEquipped(tool))
+
+			button.MouseButton1Click:Connect(function()
+				clickEffect(slotData)
+				equipTool(tool)
+			end)
+		end
+	end
+end
+
+refreshEditor = function()
+	clearButtons(editor)
+	table.clear(editorSlots)
+	hoverSlot = nil
+	updateEditorLayout()
+
+	for i = 1, 10 do
+		local tool = hotbarTools[i]
+
+		local button = Instance.new("TextButton")
+		local corner = Instance.new("UICorner")
+		local stroke = Instance.new("UIStroke")
+		local scale = Instance.new("UIScale")
+		local number = Instance.new("TextLabel")
+
+		button.Name = "EditorSlot" .. i
+		button.Size = UDim2.fromScale(1, 1)
+		button.BackgroundColor3 = tool
+			and Color3.fromRGB(20, 20, 24)
+			or Color3.fromRGB(18, 18, 22)
+		button.BackgroundTransparency = tool and 0 or 0.35
+		button.BorderSizePixel = 0
+		button.AutoButtonColor = false
+		button.Text = ""
+		button.LayoutOrder = i
+		button.Parent = editor
+		corner.CornerRadius = UDim.new(0, 8)
+		corner.Parent = button
+		stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		stroke.Enabled = true
+		stroke.Transparency = 0
+		stroke.Thickness = 1.5
+		stroke.Color = Color3.fromRGB(58, 58, 68)
+		stroke.Parent = button
+		scale.Scale = 1
+		scale.Parent = button
+		number.BackgroundTransparency = 1
+		number.Position = UDim2.new(0, 4, 0, 3)
+		number.Size = UDim2.fromOffset(12, 12)
+		number.Font = Enum.Font.GothamBold
+		number.Text = i == 10 and "0" or tostring(i)
+		number.TextColor3 = Color3.fromRGB(150, 150, 160)
+		number.TextSize = 8
+		number.TextXAlignment = Enum.TextXAlignment.Left
+		number.Parent = button
+
+		local slotData = {
+			button = button,
+			stroke = stroke,
+			scale = scale,
+			tool = tool,
+			slot = i
+		}
+
+		editorSlots[i] = slotData
+
+		if tool then
+			local icon = Instance.new("ImageLabel")
+			local fallback = Instance.new("TextLabel")
+			local name = Instance.new("TextLabel")
+
+			icon.Name = "Icon"
+			icon.BackgroundTransparency = 1
+			icon.AnchorPoint = Vector2.new(0.5, 0)
+			icon.Position = UDim2.new(0.5, 0, 0.16, 0)
+			icon.Size = UDim2.fromScale(0.6, 0.4)
+			icon.ScaleType = Enum.ScaleType.Fit
+			icon.Image = tool.TextureId or ""
+			icon.Parent = button
+			fallback.Name = "Fallback"
+			fallback.BackgroundTransparency = 1
+			fallback.AnchorPoint = Vector2.new(0.5, 0)
+			fallback.Position = UDim2.new(0.5, 0, 0.16, 0)
+			fallback.Size = UDim2.fromScale(0.6, 0.4)
+			fallback.Font = Enum.Font.GothamBold
+			fallback.Text = string.upper(string.sub(tool.Name, 1, 1))
+			fallback.TextColor3 = Color3.fromRGB(210, 210, 218)
+			fallback.TextScaled = true
+			fallback.Visible = tool.TextureId == ""
+			fallback.Parent = button
+			name.Name = "Name"
+			name.BackgroundTransparency = 1
+			name.Position = UDim2.new(0, 2, 1, -14)
+			name.Size = UDim2.new(1, -4, 0, 12)
+			name.Font = Enum.Font.GothamMedium
+			name.Text = tool.Name
+			name.TextColor3 = Color3.fromRGB(220, 220, 228)
+			name.TextSize = 7
+			name.TextTruncate = Enum.TextTruncate.AtEnd
+			name.Parent = button
+
+			setVisual(slotData, isEquipped(tool))
+
+			button.InputBegan:Connect(function(input)
+				beginPress(tool, i, input, scale)
+			end)
+		end
+	end
+end
+
+refreshInventory = function()
+	clearButtons(items)
+	table.clear(inventoryItems)
+
+	local query = string.lower(search.Text)
+	local tools = getTools()
+	local shown = 0
+
+	for _, tool in ipairs(tools) do
+		if query == "" or string.find(string.lower(tool.Name), query, 1, true) then
+			shown += 1
+
+			local button = Instance.new("TextButton")
+			local corner = Instance.new("UICorner")
+			local stroke = Instance.new("UIStroke")
+			local scale = Instance.new("UIScale")
+			local icon = Instance.new("ImageLabel")
+			local fallback = Instance.new("TextLabel")
+			local name = Instance.new("TextLabel")
+
+			button.Name = "Item"
+			button.Size = UDim2.fromOffset(88, 86)
+			button.BackgroundColor3 = Color3.fromRGB(22, 22, 27)
+			button.BackgroundTransparency = 0.28
+			button.BorderSizePixel = 0
+			button.AutoButtonColor = false
+			button.Text = ""
+			button.LayoutOrder = shown
+			button.Parent = items
+			corner.CornerRadius = UDim.new(0, 12)
+			corner.Parent = button
+			stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+			stroke.Enabled = true
+			stroke.Transparency = 0
+			stroke.Thickness = isEquipped(tool) and 2.5 or 1.5
+			stroke.Color = isEquipped(tool)
+				and Color3.fromRGB(255, 255, 255)
+				or Color3.fromRGB(58, 58, 68)
+			stroke.Parent = button
+			scale.Scale = 1
+			scale.Parent = button
+			icon.Name = "Icon"
+			icon.BackgroundTransparency = 1
+			icon.AnchorPoint = Vector2.new(0.5, 0)
+			icon.Position = UDim2.new(0.5, 0, 0, 6)
+			icon.Size = UDim2.fromOffset(58, 55)
+			icon.ScaleType = Enum.ScaleType.Fit
+			icon.Image = tool.TextureId or ""
+			icon.Parent = button
+			fallback.Name = "Fallback"
+			fallback.BackgroundTransparency = 1
+			fallback.AnchorPoint = Vector2.new(0.5, 0)
+			fallback.Position = UDim2.new(0.5, 0, 0, 6)
+			fallback.Size = UDim2.fromOffset(58, 55)
+			fallback.Font = Enum.Font.GothamBold
+			fallback.Text = string.upper(string.sub(tool.Name, 1, 1))
+			fallback.TextColor3 = Color3.fromRGB(215, 215, 222)
+			fallback.TextSize = 29
+			fallback.Visible = tool.TextureId == ""
+			fallback.Parent = button
+			name.Name = "Name"
+			name.BackgroundTransparency = 1
+			name.Position = UDim2.new(0, 4, 1, -20)
+			name.Size = UDim2.new(1, -8, 0, 15)
+			name.Font = Enum.Font.GothamMedium
+			name.Text = tool.Name
+			name.TextColor3 = Color3.fromRGB(225, 225, 232)
+			name.TextSize = 9
+			name.TextTruncate = Enum.TextTruncate.AtEnd
+			name.Parent = button
+
+			inventoryItems[tool] = {
+				button = button,
+				stroke = stroke,
+				scale = scale,
+				tool = tool
+			}
+
+			button.MouseButton1Click:Connect(function()
+				clickEffect(inventoryItems[tool])
+				equipTool(tool)
+			end)
+		end
+	end
+end
+
+local function hasSameTools(tools)
+	local current = {}
+
+	for _, tool in ipairs(tools) do
+		current[tool] = true
+	end
+
+	for _, tool in ipairs(tools) do
+		if not toolConnections[tool] then
+			return false
+		end
+	end
+
+	for tool in pairs(toolConnections) do
+		if not current[tool] then
+			return false
+		end
+	end
+
+	return true
+end
+
+syncTools = function()
+	local tools = getTools()
+	local changed = not hasSameTools(tools)
+
+	for _, tool in ipairs(tools) do
+		connectTool(tool)
+	end
+
+	for tool in pairs(toolConnections) do
+		local exists = false
+
+		for _, current in ipairs(tools) do
+			if current == tool then
+				exists = true
+				break
+			end
+		end
+
+		if not exists then
+			disconnectTool(tool)
+
+			for slot = 1, 10 do
+				if hotbarTools[slot] == tool then
+					hotbarTools[slot] = nil
+				end
+			end
+
+			toolOrder[tool] = nil
+			changed = true
+		end
+	end
+
+	for _, tool in ipairs(tools) do
+		if not getHotbarSlot(tool) then
+			local empty = getEmptyHotbarSlot()
+
+			if empty then
+				hotbarTools[empty] = tool
+				changed = true
+			end
+		end
+	end
+
+	if changed then
+		if dragging then
+			stopInteraction()
+		end
+
+		refreshHotbar()
+		refreshEditor()
+		refreshInventory()
+	end
+
+	updateVisuals()
+end
+
+local function queueSync()
+	if refreshQueued then
+		return
+	end
+
+	refreshQueued = true
+
+	task.defer(function()
+		refreshQueued = false
+		syncTools()
+	end)
+end
+
+local function setInventory(state)
+	if not state then
+		stopInteraction()
+	end
+
+	inventoryOpen = state
+	inventory.Visible = state
+	bar.Visible = not state
+
+	setBackpackVisual(state)
+	spinBackpack(state)
+
+	if state then
+		updateEditorLayout()
+		refreshInventory()
+		refreshEditor()
+
+		inventory.Position = UDim2.new(0.5, 0, 0.5, 8)
+
+		TweenService:Create(
+			inventory,
+			TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{
+				Position = UDim2.new(0.5, 0, 0.5, 0)
+			}
+		):Play()
+	end
+end
+
+search:GetPropertyChangedSignal("Text"):Connect(function()
+	refreshInventory()
+end)
+
+backpackButton.MouseButton1Click:Connect(function()
+	clickEffect({
+		scale = backpackScale
+	})
+
+	setInventory(not inventoryOpen)
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if not dragTool or not dragInput then
+		return
+	end
+
+	local isMouse = input.UserInputType == Enum.UserInputType.MouseMovement
+		and dragInput.UserInputType == Enum.UserInputType.MouseButton1
+	local isTouch = input.UserInputType == Enum.UserInputType.Touch
+		and input == dragInput
+
+	if not isMouse and not isTouch then
+		return
+	end
+
+	local position = toScreen(input.Position)
+
+	if not dragging then
+		if (position - dragStart).Magnitude >= 8 then
+			beginDragging(position)
+		end
+
+		return
+	end
+
+	updateDragPosition(position)
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if not dragTool or input ~= dragInput then
+		return
+	end
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+		finishPress(toScreen(input.Position), input)
+	end
+end)
+
+UserInputService.InputBegan:Connect(function(input, processed)
+	if processed then
+		return
+	end
+
+	if input.KeyCode == Enum.KeyCode.I
+		or input.KeyCode == Enum.KeyCode.Backquote then
+		setInventory(not inventoryOpen)
+		return
+	end
+
+	local slot
+
+	if input.KeyCode == Enum.KeyCode.One then
+		slot = 1
+	elseif input.KeyCode == Enum.KeyCode.Two then
+		slot = 2
+	elseif input.KeyCode == Enum.KeyCode.Three then
+		slot = 3
+	elseif input.KeyCode == Enum.KeyCode.Four then
+		slot = 4
+	elseif input.KeyCode == Enum.KeyCode.Five then
+		slot = 5
+	elseif input.KeyCode == Enum.KeyCode.Six then
+		slot = 6
+	elseif input.KeyCode == Enum.KeyCode.Seven then
+		slot = 7
+	elseif input.KeyCode == Enum.KeyCode.Eight then
+		slot = 8
+	elseif input.KeyCode == Enum.KeyCode.Nine then
+		slot = 9
+	elseif input.KeyCode == Enum.KeyCode.Zero then
+		slot = 10
+	end
+
+	if slot then
+		local tool = hotbarTools[slot]
+
+		if tool then
+			local slotData = slots[tool]
+
+			if slotData then
+				clickEffect(slotData)
+			end
+
+			equipTool(tool)
+		end
+	end
+end)
+
+local backpack = plr:WaitForChild("Backpack")
+
+backpack.ChildAdded:Connect(function(child)
+	if child:IsA("Tool") then
+		queueSync()
+	end
+end)
+
+backpack.ChildRemoved:Connect(function(child)
+	if child:IsA("Tool") then
+		queueSync()
+	end
+end)
+
+plr.CharacterAdded:Connect(function(character)
+	character.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") then
+			queueSync()
+		end
+	end)
+
+	character.ChildRemoved:Connect(function(child)
+		if child:IsA("Tool") then
+			queueSync()
+		end
+	end)
+
+	task.wait(0.15)
+
+	pcall(function()
+		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+	end)
+
+	queueSync()
+end)
+
+if plr.Character then
+	plr.Character.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") then
+			queueSync()
+		end
+	end)
+
+	plr.Character.ChildRemoved:Connect(function(child)
+		if child:IsA("Tool") then
+			queueSync()
+		end
+	end)
+end
+
+task.spawn(function()
+	while gui.Parent do
+		pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+		end)
+
+		task.wait(0.5)
+	end
+end)
+
+updateEditorLayout()
+syncTools()
+refreshHotbar()
+refreshEditor()
+refreshInventory()
+setBackpackVisual(false)
